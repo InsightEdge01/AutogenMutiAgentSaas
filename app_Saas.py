@@ -1,3 +1,4 @@
+
 from autogen import AssistantAgent, GroupChatManager, UserProxyAgent
 from autogen.agentchat import GroupChat
 
@@ -9,59 +10,67 @@ config_list = [
     }
 ]
 
-llm_config = {"config_list": config_list, "seed": 42, "request_timeout": 600,}
+llm_config = {"config_list": config_list, "seed": 42, "request_timeout": 600,
+              "temperature": 0,}
 
-administrator = UserProxyAgent(
-    name="administrator",
+admin = UserProxyAgent(
+    name="admin",
     human_input_mode="NEVER",
-    system_message="A human admin. Interact with the planner to discuss the plan. Plan execution needs to be approved by this admin.",
+    system_message="""Reply TERMINATE if the task has been solved at full satisfaction.
+                      Otherwise, reply CONTINUE, or the reason why the task is not solved yet.""",
     llm_config=llm_config,
     code_execution_config=False,
 )
 
-sales = AssistantAgent(
+Marketing = AssistantAgent(
+    name="Marketing",
+    llm_config=llm_config,
+    system_message="Marketing. You Adhere to an approved plan and develop a marketing strategy for your SaaS product."""
+)
+
+Sales = AssistantAgent(
     name="Sales",
     llm_config=llm_config,
     system_message="""
-    Sales. You follow an approved plan. You make Sales strategy for your SAAS solution.
+    Sales.You execute an approved plan and formulate a sales strategy for your SaaS solution.".
 """,
 )
 
-planner = AssistantAgent(
+Planner = AssistantAgent(
     name="Planner",
     system_message="""
-Planner. Suggest a plan. Revise the plan based on feedback from admin and reviewer, until admin approval.
-The plan involve Marketing , Sales reviwer,executor and Product.
-Explain the plan first. Be clear which step is performed by Marketing ,executor,Sales,reviewer and Product
+Planner.Propose a plan and iteratively refine it based on feedback from the admin and 
+critic until it obtains admin approval. 
+Begin by providing a clear explanation of the plan, 
+specifying which steps are carried out by the Marketing, Sales,critic, and Product teams.
 
 """,
     llm_config=llm_config,
 )
 
-executor = UserProxyAgent(
-    name="Executor",
-    system_message="Executor. Execute the written task by the planner and report the result.",
-    human_input_mode="NEVER",
+Product = AssistantAgent(
+    name="Product",
     llm_config=llm_config,
-    code_execution_config={"work_dir":"full_docs"},
-)
+    system_message="""Product.You Adhere to an approved plan and ensure the accurate implementation of specifications for the SaaS-based product.
+""",)
 
-reviewer = AssistantAgent(
-    name="reviewer",
-    system_message="""reviewer.Double check plan, claims,from other agents and provide feedback.
-    Check whether the plan includes adding verifiable info such as source URL.""",
+
+critic = AssistantAgent(
+    name="critic",
+    system_message="""critic.Thoroughly review the plan and claims from other agents and offer feedback. Additionally,
+    ensure the plan includes verifiable information, such as source URLs.""",
     llm_config=llm_config,
 )
 groupchat = GroupChat(
-    agents=[administrator, sales, planner, executor,reviewer],
+    agents=[admin, Sales,Marketing,Product,Planner,critic],
     messages=[],
-    max_round=60,
+    max_round=500,
 )
 manager = GroupChatManager(groupchat=groupchat, llm_config=llm_config)
 
-administrator.initiate_chat(
+admin.initiate_chat(
     manager,
     message=""" 
-We want to create a SaaS solution that helps companies optimize their supply chain management.
+develop a SaaS solution designed to streamline and enhance supply chain management for businesses.
 """,
 )
